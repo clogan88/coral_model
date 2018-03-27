@@ -1,0 +1,48 @@
+---
+title: "Fig_1"
+author: "Cheryl Logan"
+date: "3/26/2018"
+output: html_document
+---
+## Load libraries
+```{r load libraries, echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse) #install.packages("tidyverse")
+library(skimr) #install.packages("skimr")
+library(ggthemes) #install.packages("ggthemes")
+```
+
+## Load data
+```{r load data, echo = FALSE, message = FALSE, warning = FALSE}
+## data
+rcp26 <- read_csv("~/github/coral_model/healthy_rcp26.csv") 
+rcp45 <- read_csv("~/github/coral_model/healthy_rcp45.csv") 
+rcp60 <- read_csv("~/github/coral_model/healthy_rcp60.csv") 
+rcp85 <- read_csv("~/github/coral_model/healthy_rcp85.csv") 
+```
+
+# Append rcp column
+```{r append rcp column, echo = FALSE, message = FALSE, warning = FALSE}
+rcp26 <- mutate(rcp26,rcp = "rcp26")
+rcp45 <- mutate(rcp45,rcp = "rcp45")
+rcp60 <- mutate(rcp60,rcp = "rcp60")
+rcp85 <- mutate(rcp85,rcp = "rcp85")
+```
+
+## Join into a single data frame
+```{r}
+all_rcps <- dplyr::bind_rows(rcp26, rcp45, rcp60, rcp85) # bind all rows together
+```
+
+## Plot using faceting
+```{r plot}
+ggplot() + 
+geom_line(data = all_rcps, aes(x=Year, y=E0_OA0), size = 1, color = "red") +
+  geom_line(data = all_rcps, aes(x=Year, y=E1_OA0), size = 1, color = "blue") +
+facet_wrap(~ rcp) +
+theme_bw() +
+xlim(c(2000,2100)) +
+labs(title = "Global Coral Survival, no symbiont evolution", x = "Year", y = "% of Global Reefs Surviving")
+```
+
+
+  
