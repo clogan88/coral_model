@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse) #install.packages("tidyverse")
 library(skimr) #install.packages("skimr")
 library(ggthemes) #install.packages("ggthemes")
+library(reshape2)
 ```
 
 ## Load data
@@ -31,17 +32,28 @@ rcp85 <- mutate(rcp85,rcp = "rcp85")
 ## Join into a single data frame
 ```{r}
 all_rcps <- dplyr::bind_rows(rcp26, rcp45, rcp60, rcp85) # bind all rows together
+
+all_rcps <- all_rcps %>%
+  select(Year, rcp, E0_OA0, E1_OA0) %>%
+  rename(yes = E1_OA0, no = E0_OA0) %>%
+  gather(evolve, coral, 3:4)
+
+names(all_rcps)
+  
 ```
 
 ## Plot using faceting
 ```{r plot}
-ggplot() + 
-geom_line(data = all_rcps, aes(x=Year, y=E0_OA0), size = 1, color = "red") +
-  geom_line(data = all_rcps, aes(x=Year, y=E1_OA0), size = 1, color = "blue") +
-facet_wrap(~ rcp) +
-theme_bw() +
-xlim(c(2000,2100)) +
-labs(title = "Global Coral Survival, no symbiont evolution", x = "Year", y = "% of Global Reefs Surviving")
+ggplot(data = all_rcps, aes(x=Year, y= coral)) + 
+geom_line(aes(color = evolve)) +
+facet_wrap(~ rcp) +   # facet by RCP
+theme_bw() +          # set theme
+xlim(c(2000,2100)) +  # set x limits
+labs(x = "Year", y = "Mean % live coral across all reef cells (n=1925)") 
+
+
+# show plot
+ggsave("Figure2.png", width = 15, height = 12, units = "cm", device = "png") # save plot
 ```
 
 
