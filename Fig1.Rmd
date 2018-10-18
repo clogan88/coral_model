@@ -23,10 +23,10 @@ rcp85 <- read_csv("~/github/coral_model/healthy_rcp85.csv")
 
 # Append rcp column
 ```{r append rcp column, echo = FALSE, message = FALSE, warning = FALSE}
-rcp26 <- mutate(rcp26,rcp = "rcp26")
-rcp45 <- mutate(rcp45,rcp = "rcp45")
-rcp60 <- mutate(rcp60,rcp = "rcp60")
-rcp85 <- mutate(rcp85,rcp = "rcp85")
+rcp26 <- mutate(rcp26,rcp = "RCP2.6")
+rcp45 <- mutate(rcp45,rcp = "RCP4.5")
+rcp60 <- mutate(rcp60,rcp = "RCP6.0")
+rcp85 <- mutate(rcp85,rcp = "RCP8.5")
 ```
 
 ## Join into a single data frame
@@ -35,8 +35,8 @@ all_rcps <- dplyr::bind_rows(rcp26, rcp45, rcp60, rcp85) # bind all rows togethe
 
 all_rcps <- all_rcps %>%
   select(Year, rcp, E0_OA0, E1_OA0) %>%
-  rename(yes = E1_OA0, no = E0_OA0) %>%
-  gather(evolve, coral, 3:4)
+  rename(adaptation = E1_OA0, no_adaptation = E0_OA0) %>%
+  gather(Symbiont_Evolution, coral, 3:4)
 
 names(all_rcps)
   
@@ -45,15 +45,15 @@ names(all_rcps)
 ## Plot using faceting
 ```{r plot}
 ggplot(data = all_rcps, aes(x=Year, y= coral)) + 
-geom_line(aes(color = evolve)) +
+geom_line(aes(color = Symbiont_Evolution)) +
 facet_wrap(~ rcp) +   # facet by RCP
 theme_bw() +          # set theme
 xlim(c(2000,2100)) +  # set x limits
-labs(x = "Year", y = "Mean % live coral across all reef cells (n=1925)") 
+labs(x = "Year", y = "Mean % Coral Cover (n=1,925 reef cells)") 
 
 
 # show plot
-ggsave("Figure2.png", width = 15, height = 12, units = "cm", device = "png") # save plot
+ggsave("Figure2.png", width = 25, height = 12, units = "cm", device = "png") # save plot
 ```
 
 
