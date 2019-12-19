@@ -35,8 +35,8 @@ all_rcps <- dplyr::bind_rows(rcp26, rcp45, rcp60, rcp85) # bind all rows togethe
 
 all_rcps <- all_rcps %>%
   select(Year, rcp, E0_OA0, E1_OA0) %>%
-  rename(adaptation = E1_OA0, no_adaptation = E0_OA0) %>%
-  gather(Symbiont_Evolution, coral, 3:4)
+  rename(evolution = E1_OA0, baseline = E0_OA0) %>%
+  gather(Model_run, coral, 3:4)
 
 names(all_rcps)
   
@@ -45,11 +45,11 @@ names(all_rcps)
 ## Plot using faceting
 ```{r plot}
 ggplot(data = all_rcps, aes(x=Year, y= coral)) + 
-geom_line(aes(color = Symbiont_Evolution)) +
+geom_line(aes(color = Model_run)) +
 facet_wrap(~ rcp) +   # facet by RCP
 theme_bw() +          # set theme
 xlim(c(2000,2100)) +  # set x limits
-labs(x = "Year", y = "Mean % Coral Cover (n=1,925 reef cells)") 
+labs(x = "Year", y = "Normalized mean global coral cover") 
 
 
 # show plot
