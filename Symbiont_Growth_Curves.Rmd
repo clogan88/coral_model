@@ -1,0 +1,226 @@
+---
+title: "Symbiont_Growth_Rates"
+author: "Cheryl Logan"
+date: "2/9/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+Load libraries
+```{r load libraries, include=FALSE}
+library(tidyverse)
+library(reshape2)
+```
+
+Define Symbiont Model Parameters from Logan et al. 2021 paper
+```{r params, include=FALSE}
+# Eppley fxn parameters
+a = 1.0768/12   # yr-1 - Linear Growth Rate (divide by 12 to get per month)
+b = 0.0633       # C-1 - Exponential growth function
+# evolutionary model parameters
+selVx = 3.4627  # selectional variance
+vg = .0025      # genetic variance (Zero when E=0!)
+EnvVx = 0.0114  # environmental variance
+# initialization for symbiont's optiomal temperature
+g = 25         # initial temperature to which heat sensitive symbiont is optimally adapted
+advantage = 1   # heat-tolerant symbiont advantage over heat sensitive symbiont (in degC)
+g2 = g + advantage # temperature to which heat tolerant symbiont is optimally adapted
+```
+
+
+Symbiont Growth curve
+
+The "E221" curve:
+ri(i,:) = (1- (vgi(i,:) + con.EnvVx + (min(2, gi(i,:) - temp(i))).^2) ./ (2*SelVx)) .* exp(con.b*min(0, temp(i) - gi(i,:) + 2)) * rm;
+
+Written more simply:
+mainpart = 1 - (vg +EnvVx + min(M1,g-T)^2 / (selVx)
+extraExp = exp(X * b*min(0, T - g + M2))
+r = mainpart * extraExp * rm
+
+
+The values in mmx are
+1) M1 The value in the first min function.
+2) M2 The value in the "extra exponential", originally an argument to "min",
+now a value added to gi.
+3) X a multiplier on the "b" growth constant meant to steepen the curve
+left of optimum.
+4) B to select optional equation forms, currently the +1 advantage for shuffling.
+5) 0/1 for default behavior or shifting max growth so that the tolerant symbiont 
+gains no growth rate advantage.
+
+Symbiont 1 = heat sensitive symbiont
+Symbiont 2 = heat tolerant symbiont
+
+
+
+# Plot multiple growth curves with same selectional variance value (SelVx)
+```{r Sym1 sym2, echo=FALSE}
+
+X = -2
+ri.adjust.1 = 2.6
+ri.adjust.2 = 2.6
+
+selVx=2
+
+Temp = seq(1, 35, by=.1)  
+# for small selVx values, the curve shape begins to increase on the cold side
+#SelV_vec <- c(.5, 1, 2, 4, 6, 8)
+ri <- matrix(nrow=length(Temp), ncol=2)
+  
+cnt = 1
+for(T in Temp) {
+    rm = a*exp(b*T)
+    
+    # M1 = 2; M2 = M1 #E221
+    # main = 1 - (vg + EnvVx + min(M1,g-T)^2) / (2*selVx)
+    # extraexp = exp(1 * b*min(0, T - g + M2))
+    # ri[cnt,1] = main * extraexp * rm
+    # 
+    # M1 = 2; M2 = M1 #E221
+    # main = 1 - (vg + EnvVx + min(M1,g2-T)^2) / (2*selVx)
+    # extraexp = exp(1 * b*min(0, T - g2 + M2))
+    # ri[cnt,2] = main * extraexp * rm
+    # # 
+    # M1 = sqrt(abs(ri.adjust.1*selVx-vg-EnvVx)); M2 = M1 #CL_new #.25*rmax
+    # main = 1 - (vg + EnvVx + min(M1,g-T)^2) / (2*selVx)
+    # extraexp = exp(X * b*min(0, T - g + M2))
+    # ri[cnt,3] = main * extraexp * rm
+    # 
+    # M1 = sqrt(abs(ri.adjust.2*selVx-vg-EnvVx)); M2 = M1 #CL_new #.25*rmax
+    # main = 1 - (vg + EnvVx + min(M1,g2-T)^2) / (2*selVx)
+    # extraexp = exp(X * 1*b*min(0, T - g2 + M2))
+    # ri[cnt,4] = main * extraexp * rm
+    
+    M1 = sqrt(abs(ri.adjust.1*selVx)); M2 = M1 #simple
+    main = 1 - (vg + EnvVx + min(M1,g-T)^2) / (2*selVx)
+    extraexp = exp(X * b*min(0, T - g + M2))
+    ri[cnt,1] = main * extraexp * rm
+
+    M1 = sqrt(abs(ri.adjust.2*selVx)); M2 = M1 #simple
+    main = 1 - (vg + EnvVx + min(M1,g2-T)^2) / (2*selVx)
+    extraexp = exp(X * 1*b*min(0, T - g2 + M2))
+    ri[cnt,2] = main * extraexp * rm
+    
+    cnt = cnt+1
+  }
+
+df <- data.frame("Temp" = Temp, "ri" = ri) # convert matrix to data frame
+df <- rename(df, symbiont_1_new= ri.1, symbiont_2_new= ri.2)
+#df <- rename(df, E221= ri.1, E111= ri.2, E001= ri.3, CL_new= ri.4, CL_v2= ri.5 )
+#Curves <- c(E221, E111, E001, CL_new, CL_v2)SelVx=
+mdf <- reshape2::melt(df, id.var = "Temp")
+
+#Plot Symbiont Growth Rate function
+cols <- c("symbiont_1_new" = "black", "symbiont_2_new" = "blue")
+
+ggplot(mdf, aes(x=Temp, y=value, colour=variable)) +
+  geom_point(size = 0.1) + 
+  geom_line(size = 0.9) +
+  ylim(-.3, .5) +
+  xlim(15, 30) +
+  xlab("Temperature (degC)") +
+  ylab("Symbiont Growth Rate") +
+  theme(legend.position="right") + 
+  theme_classic() +
+  scale_colour_manual(values = cols) +
+  ggtitle( paste( "selVx=", selVx, ", sym1adj=",ri.adjust.1 , ", sym2adj=",ri.adjust.2, ", X=", X ) )
+
+ggsave("growth_curve_new.png", height = 3, width = 5)
+```
+
+
+
+
+# Plot growth curve across range of  SelVx
+```{r SelV Range, echo=FALSE}
+X = -2
+Temp = seq(1, 35, by=.1)  
+SelV_vec <- c(.25, .5, 1, 2, 4, 6, 8)
+ri <- matrix(nrow=length(Temp), ncol=length(SelV_vec))
+ri.adjust = 2.6
+
+Scnt = 1
+for(selVx in SelV_vec) {
+  cnt = 1
+  for (T in Temp) {
+    M1 = sqrt((ri.adjust * selVx - vg - EnvVx)); M2 = M1
+    rm = a*exp(b*T)
+    main = 1 - (vg + EnvVx + min(M1, g - T) ^ 2) / (2 * selVx)
+    extraexp =  exp(X * b * min(0, T - g + M2))
+    ri[cnt, Scnt] = main * extraexp * rm
+    cnt = cnt + 1
+  }
+  Scnt = Scnt + 1
+}
+
+df <- data.frame("Temp" = Temp, "ri" = ri) # convert matrix to data frame
+df <- rename(df, SelV_.25= ri.1, SelV_.5= ri.2, SelV_1= ri.3, SelV_2= ri.4, SelV_4= ri.5, SelV_6= ri.6, SelV_8= ri.7)
+mdf <- reshape2::melt(df, id.var = "Temp")
+
+ggplot(mdf, aes(x=Temp, y=value, colour=variable)) +
+  geom_point(size = 0.1) + 
+  geom_line() +
+  ylim(-.5, .5) +
+  xlim(10, 35) +
+  xlab("Temperature (degC)") +
+  ylab("Symbiont Growth Rate") +
+  theme(legend.position="right") + 
+  ggtitle( paste( "ri.adjust =", ri.adjust, ", X =", X))
+```
+
+
+
+Baskett et al. 2009 original sym growth curve
+```{r echo=FALSE}
+#Marissa's original curve
+selVx = 2
+Temp = seq(1, 35, by=.1)  
+ri <- matrix(nrow=length(Temp), ncol=3)
+cnt=1
+for(T in Temp){
+  ri[cnt,1] = 1 - (vg + EnvVx + (g-T)^2) / (2*selVx) 
+  ri[cnt,2] = a*exp(b*T)
+  ri[cnt,3] = ri[cnt,1] * ri[cnt,2]
+  cnt = cnt+1  
+}
+ df <- data.frame("r_hat" = ri) # convert matrix to data frame
+
+# plot original curve
+ggplot(df, aes(x=Temp, y=ri[,3])) +
+  geom_point() + 
+  geom_line() +
+  #ylim(-.5, .5) +
+  #xlim(15, 30) +
+  xlab("Temperature (degC)") +
+  ylab("Symbiont Growth Rate") +
+  theme(legend.position="right") + 
+  ggtitle( paste( " Symbiont growth curve (Baskett et al. 2009), selVx =", selVx))
+```
+Baskett et al. 2009 original sym growth curve
+```{r echo=FALSE}
+#Marissa's original curve
+selVx = 2
+Temp = seq(1, 35, by=.1)  
+ri <- matrix(nrow=length(Temp), ncol=3)
+cnt=1
+for(T in Temp){
+  ri[cnt,1] = 1 - (vg + EnvVx + (g-T)^2) / (2*selVx) 
+  ri[cnt,2] = a*exp(b*T)
+  ri[cnt,3] = ri[cnt,1] * ri[cnt,2]
+  cnt = cnt+1  
+}
+ df <- data.frame("r_hat" = ri) # convert matrix to data frame
+
+# plot original curve
+ggplot(df, aes(x=Temp, y=ri[,3])) +
+  geom_point() + 
+  geom_line() +
+  #ylim(-.5, .5) +
+  #xlim(15, 30) +
+  xlab("Temperature (degC)") +
+  ylab("Symbiont Growth Rate") +
+  theme(legend.position="right") + 
+  ggtitle( paste( " Symbiont growth curve (Baskett et al. 2009), selVx =", selVx))
+```
